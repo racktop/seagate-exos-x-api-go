@@ -14,7 +14,7 @@ test:
 
 semantic-release:
   stage: release
-  image: enix/semantic-release:gitlab
+  image: seagate/semantic-release:gitlab
   script:
     - npx semantic-release --ci
   only:

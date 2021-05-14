@@ -1,9 +1,8 @@
 {
-  "name": "dothill-api-mock-server",
+  "name": "exosx-api-mock-server",
   "version": "1.0.0",
   "main": "index.js",
-  "author": "Arthur Chaloin",
-  "license": "MIT",
+  "license": "Apache 2.0",
   "dependencies": {
     "express": "^4.16.4",
     "md5": "^2.2.1"

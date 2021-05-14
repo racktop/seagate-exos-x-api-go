@@ -1,4 +1,4 @@
-package dothill
+package exosx
 
 import (
 	"crypto/tls"
@@ -11,17 +11,17 @@ import (
 	"k8s.io/klog"
 )
 
-// Client : Can be used to request the dothill API
+// Client : Can be used to request the API
 type Client struct {
 	Username   string
 	Password   string
 	Addr       string
 	HTTPClient http.Client
 	Collector  *Collector
-	sessionKey string
+	SessionKey string
 }
 
-// NewClient : Creates a dothill client by setting up its HTTP client
+// NewClient : Creates an API client by setting up its HTTP transport
 func NewClient() *Client {
 	return &Client{
 		HTTPClient: http.Client{
@@ -60,7 +60,7 @@ func (client *Client) FormattedRequest(endpointFormat string, opts ...interface{
 func (client *Client) request(req *Request) (*Response, *ResponseStatus, error) {
 	isLoginReq := strings.Contains(req.Endpoint, "login")
 	if !isLoginReq {
-		if len(client.sessionKey) == 0 {
+		if len(client.SessionKey) == 0 {
 			klog.V(1).Info("no session key stored, authenticating before sending request")
 			err := client.Login()
 			if err != nil {
@@ -103,7 +103,7 @@ func (client *Client) request(req *Request) (*Response, *ResponseStatus, error) 
 		klog.Infof("<- [%d %s] <hidden>", status.ReturnCode, status.ResponseType)
 	}
 	if status.ResponseTypeNumeric != 0 {
-		return res, status, fmt.Errorf("Dothill API returned non-zero code %d (%s)", status.ReturnCode, status.Response)
+		return res, status, fmt.Errorf("API returned non-zero code %d (%s)", status.ReturnCode, status.Response)
 	}
 
 	return res, status, nil
