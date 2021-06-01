@@ -1,4 +1,4 @@
-repositoryUrl: git@github.com:enix/dothill-api-go.git
+repositoryUrl: git@github.com:Seagate/seagate-exos-x-api-go.git
 plugins:
   - '@semantic-release/commit-analyzer'
   - '@semantic-release/release-notes-generator'

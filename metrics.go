@@ -1,4 +1,4 @@
-package dothill
+package exosx
 
 import (
 	"fmt"
@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	APICallMetric = "dothill_api_appliance_api_call"
+	APICallMetric = "exosx_api_appliance_api_call"
 	APICallHelp   = "How many API calls have been executed"
 
-	APICallDurationMetric = "dothill_api_appliance_api_call_duration"
+	APICallDurationMetric = "exosx_api_appliance_api_call_duration"
 	APICallDurationHelp   = "The total duration of API calls"
 )
 

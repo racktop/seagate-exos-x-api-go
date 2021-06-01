@@ -1,4 +1,4 @@
-package dothill
+package exosx
 
 import (
 	"crypto/md5"
@@ -9,14 +9,14 @@ import (
 // Login : Called automatically, may be called manually if credentials changed
 func (client *Client) Login() error {
 	userpass := fmt.Sprintf("%s_%s", client.Username, client.Password)
-	hash := md5.Sum([]byte(userpass))
-	res, _, err := client.FormattedRequest("/login/%x", hash)
+	hash := fmt.Sprintf("%x", md5.Sum([]byte(userpass)))
+	res, _, err := client.FormattedRequest("/login/%s", hash)
 
 	if err != nil {
 		return err
 	}
 
-	client.sessionKey = res.ObjectsMap["status"].PropertiesMap["response"].Data
+	client.SessionKey = res.ObjectsMap["status"].PropertiesMap["response"].Data
 	return nil
 }
 
