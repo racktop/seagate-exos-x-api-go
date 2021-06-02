@@ -1,19 +1,30 @@
 package exosx
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/joho/godotenv"
 	. "github.com/onsi/gomega"
+	"k8s.io/klog"
 )
 
 var client = NewClient()
 
+var logging = flag.Bool("logging", true, "logging")
+
 func init() {
 	var exists bool
 	settingsfile := ".env"
+
+	fmt.Printf("Testing setup: logging (%v)\n", *logging)
+
+	if *logging {
+		klog.InitFlags(nil)
+	}
 
 	// Note, any defined environment variable is used over the ones defined in .env
 	if _, err := os.Stat(settingsfile); err == nil {
@@ -50,6 +61,7 @@ func assert(t *testing.T, cond bool, msg string) {
 }
 
 func TestLogin(t *testing.T) {
+	t.Logf("args: %s", strings.Join(flag.Args(), " "))
 	g := NewWithT(t)
 	g.Expect(client.Login()).To(BeNil())
 }
@@ -76,16 +88,16 @@ func TestReLoginFailed(t *testing.T) {
 	wrongClient.Password = "wrongpassword"
 	wrongClient.SessionKey = "outdated-session-key"
 
-	_, status, err := wrongClient.Request("/status/code/1")
+	_, status, err := wrongClient.FormattedRequest("/status/code/1")
 	g.Expect(err).NotTo(BeNil())
 	g.Expect(status.ResponseType).To(Equal("Error"))
-	// This test returns one of two different values based on the  API version, either: 'request failed' or 'Invalid sessionkey'
-	g.Expect(status.Response).Should(BeElementOf([]string{"request failed", "Invalid sessionkey"}))
+	// This test returns one of three different values based on the  API version.
+	g.Expect(status.Response).Should(BeElementOf([]string{"re-login failed", "request failed", "Invalid sessionkey"}))
 }
 
 func TestInvalidURL(t *testing.T) {
 	g := NewWithT(t)
-	_, status, err := client.Request("/trololol")
+	_, status, err := client.FormattedRequest("/trololol")
 
 	g.Expect(err).NotTo(BeNil())
 	g.Expect(status.ResponseType).To(Equal("Error"))
@@ -94,7 +106,7 @@ func TestInvalidURL(t *testing.T) {
 
 func TestInvalidXML(t *testing.T) {
 	g := NewWithT(t)
-	_, status, err := client.Request("/invalid/xml")
+	_, status, err := client.FormattedRequest("/invalid/xml")
 
 	g.Expect(err).NotTo(BeNil())
 	g.Expect(status.ResponseType).To(Equal("Error"))
@@ -103,7 +115,7 @@ func TestInvalidXML(t *testing.T) {
 
 func TestStatusCodeNotZero(t *testing.T) {
 	g := NewWithT(t)
-	_, status, err := client.Request("/status/code/1")
+	_, status, err := client.FormattedRequest("/status/code/1")
 
 	g.Expect(err).NotTo(BeNil())
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))

@@ -12,9 +12,9 @@ This option runs the Go language test cases against a live storage system. Two s
 - Run `go test -v`
 
 Another option is to define environment variables, which take precedence over .env values
-- export TEST_STORAGEIP=http:/<ipaddress>
+- export TEST_STORAGEIP=http://<ipaddress>
 - export TEST_USERNAME=<username>
-- export TEST_USERNAME=<password>
+- export TEST_PASSWORD=<password>
 - Run `go test -v`
 - unset TEST_STORAGEIP TEST_PASSWORD TEST_USERNAME
 

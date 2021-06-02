@@ -4,7 +4,24 @@ import (
 	"crypto/md5"
 	"fmt"
 	"strings"
+
+	"k8s.io/klog"
 )
+
+// SessionValid : Determine if a session is valid, if not a login is required
+func (client *Client) SessionValid(addr, username string) bool {
+
+	if client.Addr == addr && client.Username == username {
+		if client.SessionKey == "" {
+			klog.Infof("SessionKey is invalid: %q", client.SessionKey)
+			return false
+		}
+		klog.Infof("client is already configured for API address %q, session is valid", addr)
+		return true
+	}
+
+	return false
+}
 
 // Login : Called automatically, may be called manually if credentials changed
 func (client *Client) Login() error {
@@ -17,6 +34,7 @@ func (client *Client) Login() error {
 	}
 
 	client.SessionKey = res.ObjectsMap["status"].PropertiesMap["response"].Data
+
 	return nil
 }
 
