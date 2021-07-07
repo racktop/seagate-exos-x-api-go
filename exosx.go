@@ -37,9 +37,8 @@ func NewClient() *Client {
 	}
 }
 
-// Request : Execute the given request with client's configuration
-// Deprecated: Use FormattedRequest instead
-func (client *Client) Request(endpoint string) (*Response, *ResponseStatus, error) {
+// internalRequest : Execute the given request with client's configuration
+func (client *Client) internalRequest(endpoint string) (*Response, *ResponseStatus, error) {
 	if client.Addr == "" {
 		err := errors.New("missing server address")
 		return nil, NewErrorStatus(err.Error()), err
@@ -52,7 +51,7 @@ func (client *Client) Request(endpoint string) (*Response, *ResponseStatus, erro
 func (client *Client) FormattedRequest(endpointFormat string, opts ...interface{}) (*Response, *ResponseStatus, error) {
 	endpoint := fmt.Sprintf(endpointFormat, opts...)
 	stopTrackAPICall := client.Collector.trackAPICall(endpointFormat)
-	resp, status, err := client.Request(endpoint)
+	resp, status, err := client.internalRequest(endpoint)
 	stopTrackAPICall(err == nil)
 	return resp, status, err
 }
@@ -61,7 +60,7 @@ func (client *Client) request(req *Request) (*Response, *ResponseStatus, error) 
 	isLoginReq := strings.Contains(req.Endpoint, "login")
 	if !isLoginReq {
 		if len(client.SessionKey) == 0 {
-			klog.V(1).Info("no session key stored, authenticating before sending request")
+			klog.Info("no session key stored, authenticating before sending request")
 			err := client.Login()
 			if err != nil {
 				return nil, NewErrorStatus("login failed"), err
@@ -74,13 +73,15 @@ func (client *Client) request(req *Request) (*Response, *ResponseStatus, error) 
 	}
 
 	raw, code, err := req.execute(client)
-	if code == 401 && !isLoginReq {
-		klog.V(1).Info("session key may have expired, trying to re-login")
+	klog.Infof("req.execute: status code %d", code)
+
+	if (code == 401 || code == 403) && !isLoginReq {
+		klog.Info("session key may have expired, trying to re-login")
 		err = client.Login()
 		if err != nil {
 			return nil, NewErrorStatus("re-login failed"), err
 		}
-		klog.V(1).Info("re-login succeed, re-trying request")
+		klog.Info("re-login succeed, re-trying request")
 		raw, _, err = req.execute(client)
 	}
 	if err != nil {
