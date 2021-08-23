@@ -55,7 +55,7 @@ func (client *Client) CreateNickname(name, iqn string) (*Response, *ResponseStat
 
 // MapVolume : map a volume to host + LUN
 func (client *Client) MapVolume(name, host, access string, lun int) (*Response, *ResponseStatus, error) {
-	return client.FormattedRequest("/map/volume/access/%s/lun/%d/host/%s/\"%s\"", access, lun, host, name)
+	return client.FormattedRequest("/map/volume/access/%s/lun/%d/initiator/%s/\"%s\"", access, lun, host, name)
 }
 
 // ShowVolumes : get informations about volumes
@@ -93,7 +93,8 @@ func (client *Client) ShowHostMaps(host string) ([]Volume, *ResponseStatus, erro
 	if len(host) > 0 {
 		host = fmt.Sprintf("\"%s\"", host)
 	}
-	res, status, err := client.FormattedRequest("/show/maps/%s", host)
+	klog.Infof("++ ShowHostMaps(%v)", host)
+	res, status, err := client.FormattedRequest("/show/maps/initiator/%s", host)
 	if err != nil {
 		return nil, status, err
 	}
@@ -104,10 +105,11 @@ func (client *Client) ShowHostMaps(host string) ([]Volume, *ResponseStatus, erro
 			continue
 		}
 
-		for _, object := range rootObj.Objects {
+		for i, object := range rootObj.Objects {
 			if object.Name == "volume-view" {
 				vol := Volume{}
 				vol.fillFromObject(&object)
+				klog.Infof("++ volume[%v]: %v", i, vol)
 				mappings = append(mappings, vol)
 			}
 		}
@@ -143,6 +145,7 @@ func (client *Client) GetVolumeMapsHostNames(name string) ([]string, *ResponseSt
 	if name != "" {
 		name = fmt.Sprintf("\"%s\"", name)
 	}
+	klog.V(2).Infof("++ GetVolumeMapsHostNames(%v)", name)
 	res, status, err := client.FormattedRequest("/show/maps/%s", name)
 	if err != nil {
 		return []string{}, status, err
@@ -154,9 +157,10 @@ func (client *Client) GetVolumeMapsHostNames(name string) ([]string, *ResponseSt
 			continue
 		}
 
-		for _, object := range rootObj.Objects {
+		for i, object := range rootObj.Objects {
 			hostName := object.PropertiesMap["identifier"].Data
 			if object.Name == "host-view" && hostName != "all other initiators" {
+				klog.Infof("++ hostName[%v]: %v", i, hostName)
 				hostNames = append(hostNames, hostName)
 			}
 		}
