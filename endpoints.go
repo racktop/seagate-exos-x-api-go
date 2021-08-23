@@ -39,13 +39,18 @@ func (client *Client) Login() error {
 }
 
 // CreateVolume : creates a volume with the given name, capacity in the given pool
-func (client *Client) CreateVolume(name, size, pool string) (*Response, *ResponseStatus, error) {
-	return client.FormattedRequest("/create/volume/pool/\"%s\"/size/%s/tier-affinity/no-affinity/\"%s\"", pool, size, name)
+func (client *Client) CreateVolume(name, size, pool, poolType string) (*Response, *ResponseStatus, error) {
+	if poolType == "Virtual" {
+		return client.FormattedRequest("/create/volume/pool/\"%s\"/size/%s/tier-affinity/no-affinity/\"%s\"", pool, size, name)
+	} else {
+		return client.FormattedRequest("/create/volume/pool/\"%s\"/size/%s/\"%s\"", pool, size, name)
+	}
 }
 
-// CreateHost : creates a host
-func (client *Client) CreateHost(name, iqn string) (*Response, *ResponseStatus, error) {
-	return client.FormattedRequest("/create/host/id/\"%s\"/\"%s\"", iqn, name)
+// CreateNickname : Create a nickname for an initiator. The Storage API policy is to prohibit mapping of initiators which are not either
+// (a) presently connected to the array or (b) represented by an entry in the initiator nickname table.
+func (client *Client) CreateNickname(name, iqn string) (*Response, *ResponseStatus, error) {
+	return client.FormattedRequest("/set/initiator/id/\"%s\"/nickname/\"%s\"", iqn, name)
 }
 
 // MapVolume : map a volume to host + LUN
@@ -64,7 +69,7 @@ func (client *Client) UnmapVolume(name, host string) (*Response, *ResponseStatus
 		return client.FormattedRequest("/unmap/volume/\"%s\"", name)
 	}
 
-	return client.FormattedRequest("/unmap/volume/host/\"%s\"/\"%s\"", host, name)
+	return client.FormattedRequest("/unmap/volume/initiator/\"%s\"/\"%s\"", host, name)
 }
 
 // ExpandVolume : extend a volume if there is enough space on the vdisk
@@ -88,14 +93,14 @@ func (client *Client) ShowHostMaps(host string) ([]Volume, *ResponseStatus, erro
 	if len(host) > 0 {
 		host = fmt.Sprintf("\"%s\"", host)
 	}
-	res, status, err := client.FormattedRequest("/show/host-maps/%s", host)
+	res, status, err := client.FormattedRequest("/show/maps/%s", host)
 	if err != nil {
 		return nil, status, err
 	}
 
 	mappings := make([]Volume, 0)
 	for _, rootObj := range res.Objects {
-		if rootObj.Name != "host-view" {
+		if rootObj.Name != "initiator-view" {
 			continue
 		}
 
@@ -132,4 +137,30 @@ func (client *Client) DeleteSnapshot(names ...string) (*Response, *ResponseStatu
 // CopyVolume : create an new volume by copying another one or a snapshot
 func (client *Client) CopyVolume(sourceName string, destinationName string, pool string) (*Response, *ResponseStatus, error) {
 	return client.FormattedRequest("/copy/volume/destination-pool/%q/name/%q/%q", pool, destinationName, sourceName)
+}
+
+func (client *Client) GetVolumeMapsHostNames(name string) ([]string, *ResponseStatus, error) {
+	if name != "" {
+		name = fmt.Sprintf("\"%s\"", name)
+	}
+	res, status, err := client.FormattedRequest("/show/maps/%s", name)
+	if err != nil {
+		return []string{}, status, err
+	}
+
+	hostNames := []string{}
+	for _, rootObj := range res.Objects {
+		if rootObj.Name != "volume-view" {
+			continue
+		}
+
+		for _, object := range rootObj.Objects {
+			hostName := object.PropertiesMap["identifier"].Data
+			if object.Name == "host-view" && hostName != "all other initiators" {
+				hostNames = append(hostNames, hostName)
+			}
+		}
+	}
+
+	return hostNames, status, err
 }
