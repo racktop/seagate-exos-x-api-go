@@ -76,9 +76,6 @@ type InitiatorMapItem struct {
 	Ports        string
 }
 
-// Slice of pools discovered for a storage system
-var pools []Pool
-
 type Volumes []Volume
 
 func (v Volumes) Len() int {
@@ -93,49 +90,17 @@ func (v Volumes) Less(i, j int) bool {
 	return v[i].LUN < v[j].LUN
 }
 
-// InitSystem: Gather required information from the storage controller, requires login
-func (client *Client) InitSystem(pool string) error {
-	if client.SystemInitialized {
-		return nil
+// InitSystemInfo: Retrieve and store system information for this client
+func (client *Client) InitSystemInfo() error {
+
+	err := AddSystem(client.Addr, client)
+	if err != nil {
+		return fmt.Errorf("unable to add system info for ip (%s) ", client.Addr)
 	}
 
-	// Initialize the pool type
-	client.PoolName = pool
-	err := client.InitPools()
-	klog.V(0).Infof("chosen pool: %s, %s, %s\n", client.PoolData.Name, client.PoolData.Type, client.PoolData.SerialNumber)
-
-	client.SystemInitialized = true
-
-	return err
-}
-
-// InitPools : Called to initialize the list of available pools and their type (Virtual, Linear)
-func (client *Client) InitPools() error {
-
-	pools = nil
-
-	response, status, err := client.FormattedRequest("/show/pools")
-
-	if err == nil && status.ResponseTypeNumeric == 0 {
-		for _, rootObj := range response.Objects {
-			if rootObj.Name == "pools" || rootObj.Name == "pool" {
-				pools = append(pools,
-					Pool{
-						Name:         rootObj.PropertiesMap["name"].Data,
-						SerialNumber: rootObj.PropertiesMap["serial-number"].Data,
-						Type:         rootObj.PropertiesMap["storage-type"].Data,
-					})
-				if rootObj.PropertiesMap["name"].Data == client.PoolName {
-					client.PoolData.Name = rootObj.PropertiesMap["name"].Data
-					client.PoolData.SerialNumber = rootObj.PropertiesMap["serial-number"].Data
-					client.PoolData.Type = rootObj.PropertiesMap["storage-type"].Data
-				}
-			}
-		}
-	}
-
-	for i, p := range pools {
-		klog.V(2).Infof("Pool [%3d] %-24s  %-8s  %s\n", i, p.Name, p.Type, p.SerialNumber)
+	client.Info, err = GetSystem(client.Addr)
+	if err == nil {
+		_ = client.Info.Log()
 	}
 
 	return err

@@ -32,8 +32,9 @@ import (
 //
 // An API Test Suite
 //
-// Goal: Execute every possible Storage Array API call used by the CSI Driver so
-//       those calls are validated against all supported storage array API versions.
+// Goal: Execute various Storage Array API calls used by other drivers and validating
+//       those calls against all supported storage array API versions. Also validate
+//       the acquistion and use of system information needed for various operations.
 //
 // API Calls Tested:
 //     /login
@@ -63,7 +64,9 @@ var expandSize = "1GiB"
 var snap1 = "snap1"
 var snap2 = "snap2"
 var loginFail = false
+var poolType = ""
 
+// ShowVolume: Display useful data from a volume object
 func ShowVolume(t *testing.T, volumeName string) {
 	g := NewWithT(t)
 
@@ -86,6 +89,7 @@ func ShowVolume(t *testing.T, volumeName string) {
 	p.Printf("\n")
 }
 
+// ShowVolumes: Display useful information for all volume objects allocated
 func ShowVolumes(t *testing.T) {
 	g := NewWithT(t)
 
@@ -118,6 +122,7 @@ func ShowVolumes(t *testing.T) {
 	fmt.Printf("\n")
 }
 
+// ShowSnapshots: Display useful information for all snapshot objects allocated
 func ShowSnapshots(t *testing.T, names string) {
 	g := NewWithT(t)
 
@@ -137,6 +142,7 @@ func ShowSnapshots(t *testing.T, names string) {
 	fmt.Printf("\n")
 }
 
+// ConditionalSkip: Skip test case if the log in failed
 func ConditionalSkip(t *testing.T) {
 	if loginFail {
 		t.Skip()
@@ -151,95 +157,22 @@ func TestAPILogin(t *testing.T) {
 	g.Expect(err).To(BeNil())
 }
 
-func TestAPIVersions(t *testing.T) {
+func TestAPISystemInfo(t *testing.T) {
 	ConditionalSkip(t)
 	g := NewWithT(t)
 
-	response, status, err := client.FormattedRequest("/show/versions/detail")
+	err := AddSystem(client.Addr, client)
 	g.Expect(err).To(BeNil())
-	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 
-	fmt.Printf("\n")
-	fmt.Printf("                  Controller A Versions        Controller B Versions\n")
-	fmt.Printf("                  ---------------------        ---------------------\n")
-
-	var mccodea, mcbasea, mccodeb, mcbaseb string
-
-	if err == nil {
-		for _, obj := range response.Objects {
-			if obj.Name == "controller-a-versions" {
-				mccodea = obj.PropertiesMap["mc-fw"].Data
-				mcbasea = obj.PropertiesMap["mc-base-fw"].Data
-			}
-			if obj.Name == "controller-b-versions" {
-				mccodeb = obj.PropertiesMap["mc-fw"].Data
-				mcbaseb = obj.PropertiesMap["mc-base-fw"].Data
-			}
-		}
-	}
-
-	fmt.Printf("MC Code Version:  %-28v %v\n", mccodea, mccodeb)
-	fmt.Printf("MC Base Version:  %-28v %v\n", mcbasea, mcbaseb)
-	fmt.Printf("\n")
-}
-
-func TestAPIControllers(t *testing.T) {
-	ConditionalSkip(t)
-	g := NewWithT(t)
-
-	respone, status, err := client.FormattedRequest("/show/controllers")
+	client.Info, err = GetSystem(client.Addr)
 	g.Expect(err).To(BeNil())
-	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 
-	if err == nil {
-		for _, obj1 := range respone.Objects {
-			if obj1.Name == "controller" || obj1.Name == "controllers" {
-				fmt.Printf("\n")
-				fmt.Printf("Controller     = %v\n", obj1.PropertiesMap["controller-id"].Data)
-				fmt.Printf("Disks          = %v\n", obj1.PropertiesMap["disks"].Data)
-				fmt.Printf("IP Address     = %v\n", obj1.PropertiesMap["ip-address"].Data)
-				fmt.Printf("Model          = %v\n", obj1.PropertiesMap["model"].Data)
-				fmt.Printf("Platform       = %v\n", obj1.PropertiesMap["platform-type"].Data)
-				fmt.Printf("Serial Number  = %v\n", obj1.PropertiesMap["serial-number"].Data)
-				fmt.Printf("Status         = %v\n", obj1.PropertiesMap["status"].Data)
-				fmt.Printf("Storage Pools  = %v\n", obj1.PropertiesMap["number-of-storage-pools"].Data)
-				fmt.Printf("Disk Groups    = %v\n", obj1.PropertiesMap["virtual-disks"].Data)
-
-				for _, obj2 := range obj1.Objects {
-					if obj2.Name == "ports" {
-						fmt.Printf("-- Port        = %v, %v, %v",
-							obj2.PropertiesMap["port"].Data,
-							obj2.PropertiesMap["port-type"].Data,
-							obj2.PropertiesMap["target-id"].Data,
-						)
-						if obj2.PropertiesMap["port-type"].Data == "iSCSI" {
-							for _, obj3 := range obj2.Objects {
-								// fmt.Printf("obj3=%+v\n", obj3)
-								// fmt.Printf("obj3.Name=%v\n", obj3.Name)
-								if obj3.Name == "port-details" {
-									fmt.Printf(", %15v, %12v, %v",
-										obj3.PropertiesMap["ip-address"].Data,
-										obj3.PropertiesMap["sfp-present"].Data,
-										obj3.PropertiesMap["sfp-ethernet-compliance"].Data,
-									)
-								}
-							}
-						}
-						fmt.Printf("\n")
-					}
-				}
-			}
-		}
-	}
-
-	fmt.Printf("\n")
-}
-
-func TestAPIInitSystem(t *testing.T) {
-	ConditionalSkip(t)
-	g := NewWithT(t)
-	err := client.InitSystem(client.PoolName)
+	err = client.Info.Log()
 	g.Expect(err).To(BeNil())
+
+	// Store the pool type for use throughout the test cases
+	poolType, _ = client.Info.GetPoolType(client.PoolName)
+
 }
 
 func TestAPICreateVolume(t *testing.T) {
@@ -248,7 +181,7 @@ func TestAPICreateVolume(t *testing.T) {
 
 	var err error
 	var status *ResponseStatus
-	_, status, err = client.CreateVolume(volname1, size, client.PoolName, client.PoolData.Type)
+	_, status, err = client.CreateVolume(volname1, size, client.PoolName, poolType)
 	g.Expect(err).To(BeNil())
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 	ShowVolume(t, volname1)
@@ -342,7 +275,7 @@ func TestAPIExpandVolume(t *testing.T) {
 func TestAPICreateSnapshots(t *testing.T) {
 	ConditionalSkip(t)
 
-	if client.PoolData.Type == "Linear" {
+	if poolType == "Linear" {
 		fmt.Printf("Linear snapshots are not supported\n")
 		return
 	}
@@ -377,7 +310,7 @@ func TestAPICreateSnapshots(t *testing.T) {
 func TestAPIDeleteSnapshots(t *testing.T) {
 	ConditionalSkip(t)
 
-	if client.PoolData.Type == "Linear" {
+	if poolType == "Linear" {
 		fmt.Printf("Linear snapshots are not supported\n")
 		return
 	}
@@ -427,7 +360,7 @@ func TestAPIUnmapVolume(t *testing.T) {
 func TestAPICopyVolume(t *testing.T) {
 	ConditionalSkip(t)
 
-	if client.PoolData.Type == "Linear" {
+	if poolType == "Linear" {
 		fmt.Printf("Linear snapshots are not supported\n")
 		return
 	}
@@ -456,7 +389,7 @@ func TestAPIDeleteVolumes(t *testing.T) {
 	g.Expect(err).To(BeNil())
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 
-	if client.PoolData.Type != "Linear" {
+	if poolType != "Linear" {
 		_, status, err := client.DeleteVolume(volname2)
 		g.Expect(err).To(BeNil())
 		g.Expect(status.ResponseTypeNumeric).To(Equal(0))

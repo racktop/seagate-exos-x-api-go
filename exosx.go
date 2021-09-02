@@ -11,25 +11,17 @@ import (
 	"k8s.io/klog"
 )
 
-// Pool: Linear or virtual pool attributes
-type Pool struct {
-	Name         string
-	SerialNumber string
-	Type         string
-}
-
 // Client : Can be used to request the API
 type Client struct {
-	SystemInitialized bool
-	Username          string
-	Password          string
-	Addr              string
-	HTTPClient        http.Client
-	Collector         *Collector
-	SessionKey        string
-	Initiator         string
-	PoolName          string
-	PoolData          Pool
+	Username   string
+	Password   string
+	Addr       string
+	HTTPClient http.Client
+	Collector  *Collector
+	SessionKey string
+	Initiator  string
+	PoolName   string
+	Info       *SystemInfo
 }
 
 // NewClient : Creates an API client by setting up its HTTP transport
