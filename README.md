@@ -12,12 +12,22 @@ This option runs the Go language test cases against a live storage system. Two s
 - Run `go test -v`
 
 Another option is to define environment variables, which take precedence over .env values
-- export TEST_STORAGEIP=http://<ipaddress>
-- export TEST_USERNAME=<username>
-- export TEST_PASSWORD=<password>
+- export TEST_STORAGEIP=http://[ipaddress]
+- export TEST_USERNAME=[username]
+- export TEST_PASSWORD=[password]
+- export TEST_INITIATOR=[initiator]
+- export TEST_POOL=[pool]
 - Run `go test -v`
-- unset TEST_STORAGEIP TEST_PASSWORD TEST_USERNAME
+- unset TEST_STORAGEIP TEST_PASSWORD TEST_USERNAME TEST_INITIATOR TEST_POOL
 
+To just validate all API calls against a specified target
+- export TEST_STORAGEIP=http://[ipaddress]
+- export TEST_USERNAME=[username]
+- export TEST_PASSWORD=[password]
+- export TEST_INITIATOR=[initiator]
+- export TEST_POOL=[pool]
+- Run `go test -v -run TestAPI`
+- unset TEST_STORAGEIP TEST_PASSWORD TEST_USERNAME TEST_INITIATOR TEST_POOL
 
 ## Test Using a Mock Server
 

@@ -1,0 +1,471 @@
+//
+// Copyright (c) 2021 Seagate Technology LLC and/or its Affiliates
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// For any questions about this software or licensing,
+// please email opensource@seagate.com or cortx-questions@seagate.com.
+
+package exosx
+
+import (
+	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"k8s.io/klog"
+)
+
+// Configuration constants
+const (
+	MaximumLUN = 255
+)
+
+// Exos X Storage API Error Codes
+const (
+	snapshotNotFoundErrorCode             = -10050
+	hostMapDoesNotExistsErrorCode         = -10074
+	volumeNotFoundErrorCode               = -10075
+	volumeHasSnapshot                     = -10183
+	snapshotAlreadyExists                 = -10186
+	initiatorNicknameOrIdentifierNotFound = -10386
+	unmapFailedErrorCode                  = -10509
+)
+
+type VolumeMapInfo struct {
+	Volume       string
+	Exists       bool
+	SerialNumber string
+	Mappings     []VolumeMapItem
+}
+
+type VolumeMapItem struct {
+	InitiatorId string
+	LUN         string
+	Access      string
+	Ports       string
+	Nickname    string
+	Profile     string
+}
+
+type InitiatorMapInfo struct {
+	InitiatorId string
+	Nickname    string
+	Profile     string
+	Mappings    []InitiatorMapItem
+}
+
+type InitiatorMapItem struct {
+	Volume       string
+	SerialNumber string
+	LUN          string
+	Access       string
+	Ports        string
+}
+
+// Slice of pools discovered for a storage system
+var pools []Pool
+
+type Volumes []Volume
+
+func (v Volumes) Len() int {
+	return len(v)
+}
+
+func (v Volumes) Swap(i, j int) {
+	v[i], v[j] = v[j], v[i]
+}
+
+func (v Volumes) Less(i, j int) bool {
+	return v[i].LUN < v[j].LUN
+}
+
+// InitSystem: Gather required information from the storage controller, requires login
+func (client *Client) InitSystem(pool string) error {
+	if client.SystemInitialized {
+		return nil
+	}
+
+	// Initialize the pool type
+	client.PoolName = pool
+	err := client.InitPools()
+	klog.V(0).Infof("chosen pool: %s, %s, %s\n", client.PoolData.Name, client.PoolData.Type, client.PoolData.SerialNumber)
+
+	client.SystemInitialized = true
+
+	return err
+}
+
+// InitPools : Called to initialize the list of available pools and their type (Virtual, Linear)
+func (client *Client) InitPools() error {
+
+	pools = nil
+
+	response, status, err := client.FormattedRequest("/show/pools")
+
+	if err == nil && status.ResponseTypeNumeric == 0 {
+		for _, rootObj := range response.Objects {
+			if rootObj.Name == "pools" || rootObj.Name == "pool" {
+				pools = append(pools,
+					Pool{
+						Name:         rootObj.PropertiesMap["name"].Data,
+						SerialNumber: rootObj.PropertiesMap["serial-number"].Data,
+						Type:         rootObj.PropertiesMap["storage-type"].Data,
+					})
+				if rootObj.PropertiesMap["name"].Data == client.PoolName {
+					client.PoolData.Name = rootObj.PropertiesMap["name"].Data
+					client.PoolData.SerialNumber = rootObj.PropertiesMap["serial-number"].Data
+					client.PoolData.Type = rootObj.PropertiesMap["storage-type"].Data
+				}
+			}
+		}
+	}
+
+	for i, p := range pools {
+		klog.V(2).Infof("Pool [%3d] %-24s  %-8s  %s\n", i, p.Name, p.Type, p.SerialNumber)
+	}
+
+	return err
+}
+
+// GetVolumeMaps2: Return a list of mapped initiators for a specified volume
+func (client *Client) GetVolumeMaps2(volume string) (VolumeMapInfo, *ResponseStatus, error) {
+
+	m := VolumeMapInfo{Volume: volume}
+	original := volume
+
+	if len(volume) > 0 {
+		volume = fmt.Sprintf("\"%s\"", volume)
+	}
+
+	results, status, _ := client.FormattedRequest("/show/maps/%s", volume)
+
+	if status.ReturnCode != 0 {
+		klog.V(0).Infof("volume (%s) was not found", volume)
+		m.Exists = false
+		return m, status, nil
+	}
+
+	for _, rootObj := range results.Objects {
+		if rootObj.Name == "volume-view" {
+			id := rootObj.PropertiesMap["volume-name"].Data
+			if id != original {
+				klog.Warningf("Map data volume-name (%s) did not match parameter volume (%s)\n", id, volume)
+			}
+			m.Exists = true
+			m.SerialNumber = rootObj.PropertiesMap["volume-serial"].Data
+
+			m.Mappings = make([]VolumeMapItem, 0)
+			var mi VolumeMapItem
+
+			for _, object := range rootObj.Objects {
+				if object.Name == "host-view" && object.PropertiesMap["identifier"].Data != "all other initiators" {
+					mi = VolumeMapItem{
+						InitiatorId: object.PropertiesMap["identifier"].Data,
+						LUN:         object.PropertiesMap["lun"].Data,
+						Access:      object.PropertiesMap["access"].Data,
+						Ports:       object.PropertiesMap["ports"].Data,
+						Nickname:    object.PropertiesMap["nickname"].Data,
+						Profile:     object.PropertiesMap["host-profile"].Data,
+					}
+					m.Mappings = append(m.Mappings, mi)
+				}
+			}
+		}
+	}
+
+	return m, status, nil
+}
+
+// LogVolumeMaps: Log all map information
+func (client *Client) LogVolumeMaps(maps VolumeMapInfo) error {
+
+	klog.V(0).Infof("Mapping for (%s)\n", maps.Volume)
+	klog.V(0).Infof("-- SerialNumber: %s\n", maps.SerialNumber)
+	klog.V(0).Infof("-- Exists: %v\n", maps.Exists)
+	klog.V(0).Infof("-- Mappings:\n")
+
+	klog.V(0).Infof("--       %-46s  %-4s  %-16s  %-8s  %-16s  %-12s\n", "Initiator", "LUN", "Access", "Ports", "Nickname", "Profile")
+	klog.V(0).Infof("--       %-46s  %-4s  %-16s  %-8s  %-16s  %-12s\n", strings.Repeat("-", 46), strings.Repeat("-", 4), strings.Repeat("-", 16), strings.Repeat("-", 8), strings.Repeat("-", 16), strings.Repeat("-", 12))
+
+	for i, m := range maps.Mappings {
+		klog.V(0).Infof("-- [%3d] %-46s  %-4s  %-16s  %-8s  %-16s  %-12s\n", i, m.InitiatorId, m.LUN, m.Access, m.Ports, m.Ports, m.Nickname)
+	}
+
+	klog.V(0).Infof("\n")
+
+	return nil
+}
+
+// GetInitiatorMaps: Return a list of mapped volumes for a specified initiator
+func (client *Client) GetInitiatorMaps(initiator string) (InitiatorMapInfo, *ResponseStatus, error) {
+
+	m := InitiatorMapInfo{InitiatorId: initiator}
+	original := initiator
+
+	if len(initiator) > 0 {
+		initiator = fmt.Sprintf("\"%s\"", initiator)
+	}
+
+	results, status, err := client.FormattedRequest("/show/maps/%s", initiator)
+	if err != nil {
+		return m, status, err
+	}
+
+	for _, rootObj := range results.Objects {
+		if rootObj.Name == "initiator-view" {
+			id := rootObj.PropertiesMap["id"].Data
+			if id != original {
+				klog.Warningf("Map data id (%s) did not match parameter initiator (%s)\n", id, initiator)
+			}
+			m.Nickname = rootObj.PropertiesMap["hba-nickname"].Data
+			m.Profile = rootObj.PropertiesMap["host-profile"].Data
+
+			m.Mappings = make([]InitiatorMapItem, 0)
+			var mi InitiatorMapItem
+
+			for _, object := range rootObj.Objects {
+				if object.Name == "volume-view" {
+					mi = InitiatorMapItem{
+						Volume:       object.PropertiesMap["volume"].Data,
+						SerialNumber: object.PropertiesMap["volume-serial"].Data,
+						LUN:          object.PropertiesMap["lun"].Data,
+						Access:       object.PropertiesMap["access"].Data,
+						Ports:        object.PropertiesMap["ports"].Data,
+					}
+					m.Mappings = append(m.Mappings, mi)
+				}
+			}
+		}
+	}
+
+	return m, status, nil
+}
+
+// LogInitiatorMaps: Log all map information
+func (client *Client) LogInitiatorMaps(maps InitiatorMapInfo) error {
+
+	klog.V(0).Infof("Mapping for (%s)\n", maps.InitiatorId)
+	klog.V(0).Infof("-- Nickname: %s\n", maps.Nickname)
+	klog.V(0).Infof("-- Profile : %s\n", maps.Profile)
+	klog.V(0).Infof("-- Mappings:\n")
+
+	klog.V(0).Infof("--       %-32s  %-32s  %-4s  %-16s  %-8s\n", "Volume", "SerialNumber", "LUN", "Access", "Ports")
+	klog.V(0).Infof("--       %-32s  %-32s  %-4s  %-16s  %-8s\n", strings.Repeat("-", 32), strings.Repeat("-", 32), strings.Repeat("-", 4), strings.Repeat("-", 16), strings.Repeat("-", 8))
+
+	for i, m := range maps.Mappings {
+		klog.V(0).Infof("-- [%3d] %-32s  %-32s  %-4s  %-16s  %-8s\n", i, m.Volume, m.SerialNumber, m.LUN, m.Access, m.Ports)
+	}
+
+	klog.V(0).Infof("\n")
+
+	return nil
+}
+
+// GetVolumeMaps: Return a slice of mapped initiators for a specified volume
+func (client *Client) GetVolumeMaps(volume string) ([]string, []string, *ResponseStatus, error) {
+	if volume != "" {
+		volume = fmt.Sprintf("\"%s\"", volume)
+	}
+	res, status, err := client.FormattedRequest("/show/maps/%s", volume)
+
+	if err != nil {
+		return []string{}, []string{}, status, err
+	}
+
+	initiators := []string{}
+	luns := []string{}
+
+	for _, rootObj := range res.Objects {
+		if rootObj.Name != "volume-view" {
+			continue
+		}
+
+		for _, object := range rootObj.Objects {
+			//klog.Infof("%v", object)
+			initiatorName := object.PropertiesMap["identifier"].Data
+			lun := object.PropertiesMap["lun"].Data
+
+			if object.Name == "host-view" && initiatorName != "all other initiators" {
+				klog.V(2).Infof("map: volume (%s) --> initiator (%s) lun (%s)", volume, initiatorName, lun)
+				initiators = append(initiators, initiatorName)
+				luns = append(luns, lun)
+			}
+		}
+	}
+
+	return initiators, luns, status, err
+}
+
+// nextLUN: Determine the next available Loginal Unit Number (LUN), which is used for mapping avolume to an initiator
+func (client *Client) nextLUN(maps InitiatorMapInfo) (int, error) {
+
+	if len(maps.InitiatorId) == 0 {
+		klog.V(0).Infof("initiator does not exist, no LUN mappings yet, using LUN 1")
+		return 1, nil
+	}
+
+	luns := make([]int, 0)
+	for _, m := range maps.Mappings {
+		lun, err := strconv.Atoi(m.LUN)
+		if err == nil {
+			luns = append(luns, lun)
+		}
+	}
+	sort.Ints(luns)
+
+	klog.V(2).Infof("checking if LUN 1 is in use")
+	if len(luns) == 0 || luns[0] > 1 {
+		return 1, nil
+	}
+
+	klog.V(2).Infof("searching for an available LUN between LUNs in use")
+	for index := 1; index < len(luns); index++ {
+		if luns[index]-luns[index-1] > 1 {
+			return luns[index-1] + 1, nil
+		}
+	}
+
+	klog.V(2).Infof("checking if next LUN is not above maximum LUNs limit")
+	if luns[len(luns)-1]+1 < MaximumLUN {
+		return luns[len(luns)-1] + 1, nil
+	}
+
+	return -1, status.Error(codes.ResourceExhausted, "no LUN is available")
+}
+
+// chooseLUN: Choose the next available LUN for a given initiator
+func (client *Client) chooseLUN(initiatorName string) (int, error) {
+	klog.Infof("listing all LUN mappings")
+	volumes, responseStatus, err := client.ShowHostMaps(initiatorName)
+	if err != nil && responseStatus == nil {
+		return -1, err
+	}
+	if responseStatus.ReturnCode == hostMapDoesNotExistsErrorCode {
+		klog.Info("initiator does not exist, assuming there is no LUN mappings yet and using LUN 1")
+		return 1, nil
+	}
+	if err != nil {
+		return -1, err
+	}
+
+	sort.Sort(Volumes(volumes))
+
+	klog.V(5).Infof("checking if LUN 1 is not already in use")
+	if len(volumes) == 0 || volumes[0].LUN > 1 {
+		return 1, nil
+	}
+
+	klog.V(5).Infof("searching for an available LUN between LUNs in use")
+	for index := 1; index < len(volumes); index++ {
+		if volumes[index].LUN-volumes[index-1].LUN > 1 {
+			return volumes[index-1].LUN + 1, nil
+		}
+	}
+
+	klog.V(5).Infof("checking if next LUN is not above maximum LUNs limit")
+	if volumes[len(volumes)-1].LUN+1 < MaximumLUN {
+		return volumes[len(volumes)-1].LUN + 1, nil
+	}
+
+	return -1, status.Error(codes.ResourceExhausted, "no more available LUNs")
+}
+
+// mapVolumeProcess: Map a volume to an initiator and create a nickname when required by the storage array
+func (client *Client) mapVolumeProcess(volumeName, initiatorName string, lun int) error {
+	klog.Infof("trying to map volume %s for initiator %s on LUN %d", volumeName, initiatorName, lun)
+	_, metadata, err := client.MapVolume(volumeName, initiatorName, "rw", lun)
+	if err != nil && metadata == nil {
+		return err
+	}
+
+	klog.Infof("status: metadata.ReturnCode=%v", metadata.ReturnCode)
+	if metadata.ReturnCode == initiatorNicknameOrIdentifierNotFound {
+		nodeIDParts := strings.Split(initiatorName, ":")
+		if len(nodeIDParts) < 2 {
+			return status.Error(codes.InvalidArgument, "specified node ID is not a valid IQN")
+		}
+
+		nickname := strings.Join(nodeIDParts[1:], ":")
+		nickname = strings.ReplaceAll(nickname, ".", "-")
+
+		klog.Infof("initiator does not exist, creating it with nickname %s", nickname)
+		_, _, err = client.CreateNickname(nickname, initiatorName)
+		if err != nil {
+			return err
+		}
+		klog.Info("retrying to map volume")
+		_, _, err = client.MapVolume(volumeName, initiatorName, "rw", lun)
+		if err != nil {
+			return err
+		}
+	} else if metadata.ReturnCode == volumeNotFoundErrorCode {
+		return status.Errorf(codes.NotFound, "volume %s not found", volumeName)
+	} else if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+
+	return nil
+}
+
+// CheckVolumeExists: Return true if a volume already exists
+func (client *Client) CheckVolumeExists(volumeID string, size int64) (bool, error) {
+	data, responseStatus, err := client.ShowVolumes(volumeID)
+	if err != nil && responseStatus.ReturnCode != -10058 {
+		return false, err
+	}
+
+	for _, object := range data.Objects {
+		if object.Name == "volume" && object.PropertiesMap["volume-name"].Data == volumeID {
+			blocks, _ := strconv.ParseInt(object.PropertiesMap["blocks"].Data, 10, 64)
+			blocksize, _ := strconv.ParseInt(object.PropertiesMap["blocksize"].Data, 10, 64)
+
+			if blocks*blocksize == size {
+				return true, nil
+			}
+			return true, status.Error(codes.AlreadyExists, "cannot create volume with same name but different capacity than the existing one")
+		}
+	}
+
+	return false, nil
+}
+
+// PublishVolume: Attach a volume to an initiator
+func (client *Client) PublishVolume(volumeId string, initiatorName string) (string, error) {
+
+	hostNames, _, err := client.GetVolumeMapsHostNames(volumeId)
+	if err != nil {
+		return "", err
+	}
+	for _, hostName := range hostNames {
+		if hostName != initiatorName {
+			return "", status.Errorf(codes.FailedPrecondition, "volume %s is already attached to another node", volumeId)
+		}
+	}
+
+	lun, err := client.chooseLUN(initiatorName)
+	if err != nil {
+		return "", err
+	}
+	klog.Infof("using LUN %d", lun)
+
+	if err = client.mapVolumeProcess(volumeId, initiatorName, lun); err != nil {
+		return "", err
+	}
+
+	klog.Infof("successfully mapped volume (%s) for initiator (%s) using LUN (%d)", volumeId, initiatorName, lun)
+	return strconv.Itoa(lun), nil
+}
