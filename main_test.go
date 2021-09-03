@@ -50,6 +50,16 @@ func init() {
 	if exists {
 		fmt.Printf("Testing setup: %s=%s\n", "TEST_PASSWORD", client.Password)
 	}
+
+	client.Initiator, exists = os.LookupEnv("TEST_INITIATOR")
+	if exists {
+		fmt.Printf("Testing setup: %s=%s\n", "TEST_INITIATOR", client.Initiator)
+	}
+
+	client.PoolName, exists = os.LookupEnv("TEST_POOL")
+	if exists {
+		fmt.Printf("Testing setup: %s=%s\n", "TEST_POOL", client.PoolName)
+	}
 }
 
 func assert(t *testing.T, cond bool, msg string) {

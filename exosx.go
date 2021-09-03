@@ -19,6 +19,9 @@ type Client struct {
 	HTTPClient http.Client
 	Collector  *Collector
 	SessionKey string
+	Initiator  string
+	PoolName   string
+	Info       *SystemInfo
 }
 
 // NewClient : Creates an API client by setting up its HTTP transport

@@ -53,23 +53,26 @@ func (client *Client) CreateNickname(name, iqn string) (*Response, *ResponseStat
 	return client.FormattedRequest("/set/initiator/id/\"%s\"/nickname/\"%s\"", iqn, name)
 }
 
-// MapVolume : map a volume to host + LUN
-func (client *Client) MapVolume(name, host, access string, lun int) (*Response, *ResponseStatus, error) {
-	return client.FormattedRequest("/map/volume/access/%s/lun/%d/initiator/%s/\"%s\"", access, lun, host, name)
+// MapVolume : map a volume to an initiator using a specified LUN
+func (client *Client) MapVolume(name, initiator, access string, lun int) (*Response, *ResponseStatus, error) {
+	return client.FormattedRequest("/map/volume/access/%s/lun/%d/initiator/\"%s\"/\"%s\"", access, lun, initiator, name)
 }
 
 // ShowVolumes : get informations about volumes
 func (client *Client) ShowVolumes(volumes ...string) (*Response, *ResponseStatus, error) {
+	if len(volumes) == 0 {
+		return client.FormattedRequest("/show/volumes/")
+	}
 	return client.FormattedRequest("/show/volumes/\"%s\"", strings.Join(volumes, ","))
 }
 
-// UnmapVolume : unmap a volume from host
-func (client *Client) UnmapVolume(name, host string) (*Response, *ResponseStatus, error) {
-	if host == "" {
+// UnmapVolume : unmap a volume from an initiator
+func (client *Client) UnmapVolume(name, initiator string) (*Response, *ResponseStatus, error) {
+	if len(initiator) == 0 {
 		return client.FormattedRequest("/unmap/volume/\"%s\"", name)
 	}
 
-	return client.FormattedRequest("/unmap/volume/initiator/\"%s\"/\"%s\"", host, name)
+	return client.FormattedRequest("/unmap/volume/initiator/\"%s\"/\"%s\"", initiator, name)
 }
 
 // ExpandVolume : extend a volume if there is enough space on the vdisk
@@ -84,7 +87,7 @@ func (client *Client) DeleteVolume(name string) (*Response, *ResponseStatus, err
 
 // DeleteHost : deletes a host by its ID or nickname
 func (client *Client) DeleteHost(name string) (*Response, *ResponseStatus, error) {
-	return client.FormattedRequest("/delete/host/\"%s\"", name)
+	return client.FormattedRequest("/delete/hosts/\"%s\"", name)
 }
 
 // ShowHostMaps : list the volume mappings for given host
