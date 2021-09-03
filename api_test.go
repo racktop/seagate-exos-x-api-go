@@ -122,20 +122,29 @@ func ShowVolumes(t *testing.T) {
 	fmt.Printf("\n")
 }
 
-// ShowSnapshots: Display useful information for all snapshot objects allocated
-func ShowSnapshots(t *testing.T, names string) {
+// ShowSnapshot: Display useful information for a snapshot object
+func ShowSnapshot(t *testing.T, name string) {
 	g := NewWithT(t)
 
 	var err error
 	var status *ResponseStatus
 	var response *Response
-	response, status, err = client.ShowSnapshots(names)
+	response, status, err = client.ShowSnapshots(name)
 	g.Expect(err).To(BeNil())
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 
 	if err == nil {
-		for _, obj := range response.Objects {
-			fmt.Printf("++ obj.Name = %v\n", obj.Name)
+		fmt.Printf("\n")
+		fmt.Printf("Snapshots:\n")
+		for _, object := range response.Objects {
+			if object.Name == "snapshot" {
+
+				fmt.Printf("%8v, %32v, %32v\n",
+					object.PropertiesMap["storage-pool-name"].Data,
+					object.PropertiesMap["name"].Data,
+					object.PropertiesMap["volume-parent"].Data,
+				)
+			}
 		}
 	}
 
@@ -292,6 +301,7 @@ func TestAPICreateSnapshots(t *testing.T) {
 	g.Expect(err).To(BeNil())
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 	klog.Infof("successfully snapped volume (%s)", snap1)
+	ShowSnapshot(t, snap1)
 	ShowVolumes(t)
 
 	klog.Infof("snapshot volume (%s) using name (%s)", volname1, snap2)
@@ -304,6 +314,7 @@ func TestAPICreateSnapshots(t *testing.T) {
 	g.Expect(err).To(BeNil())
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 	klog.Infof("successfully snapped volume (%s)", snap2)
+	ShowSnapshot(t, snap2)
 	ShowVolumes(t)
 }
 
