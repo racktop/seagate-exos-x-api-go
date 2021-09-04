@@ -188,7 +188,7 @@ func GetSystem(url string) (*SystemInfo, error) {
 func (system *SystemInfo) Log() error {
 
 	klog.Infof("\n")
-	klog.Infof("System Infomration:")
+	klog.Infof("System Information:")
 
 	klog.Infof("\n")
 	klog.Infof("=== Controller ===")
