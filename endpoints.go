@@ -121,12 +121,12 @@ func (client *Client) ShowHostMaps(host string) ([]Volume, *ResponseStatus, erro
 	return mappings, status, err
 }
 
-// ShowSnapshots : list snapshots
+// ShowSnapshots : Show one snaphot, or all snapshots if name = ""
 func (client *Client) ShowSnapshots(names ...string) (*Response, *ResponseStatus, error) {
 	if len(names) == 0 {
 		return client.FormattedRequest("/show/snapshots")
 	}
-	return client.FormattedRequest("/show/snapshots/%q", strings.Join(names, ","))
+	return client.FormattedRequest("/show/snapshots/pattern/%q", strings.Join(names, ","))
 }
 
 // CreateSnapshot : create a snapshot in a snap pool and the snap pool if it doesn't exsits
