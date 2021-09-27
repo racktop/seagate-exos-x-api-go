@@ -37,6 +37,7 @@ const (
 // Exos X Storage API Error Codes
 const (
 	snapshotNotFoundErrorCode             = -10050
+	badInputParam                         = -10058
 	hostMapDoesNotExistsErrorCode         = -10074
 	volumeNotFoundErrorCode               = -10075
 	volumeHasSnapshot                     = -10183
@@ -388,20 +389,24 @@ func (client *Client) mapVolumeProcess(volumeName, initiatorName string, lun int
 
 // CheckVolumeExists: Return true if a volume already exists
 func (client *Client) CheckVolumeExists(volumeID string, size int64) (bool, error) {
-	data, responseStatus, err := client.ShowVolumes(volumeID)
-	if err != nil && responseStatus.ReturnCode != -10058 {
+	data, responseStatus, err := client.ShowVolumes()
+	if err != nil && responseStatus.ReturnCode != badInputParam {
 		return false, err
 	}
 
 	for _, object := range data.Objects {
-		if object.Name == "volume" && object.PropertiesMap["volume-name"].Data == volumeID {
-			blocks, _ := strconv.ParseInt(object.PropertiesMap["blocks"].Data, 10, 64)
-			blocksize, _ := strconv.ParseInt(object.PropertiesMap["blocksize"].Data, 10, 64)
+		if object.Name == "volume" {
+			klog.V(2).Infof("volume exists: checking (%s) for (%s) size (%d)", object.PropertiesMap["volume-name"].Data, volumeID, size)
 
-			if blocks*blocksize == size {
-				return true, nil
+			if object.PropertiesMap["volume-name"].Data == volumeID {
+				blocks, _ := strconv.ParseInt(object.PropertiesMap["blocks"].Data, 10, 64)
+				blocksize, _ := strconv.ParseInt(object.PropertiesMap["blocksize"].Data, 10, 64)
+
+				if blocks*blocksize == size {
+					return true, nil
+				}
+				return true, status.Error(codes.AlreadyExists, "cannot create volume with same name but different capacity than the existing one")
 			}
-			return true, status.Error(codes.AlreadyExists, "cannot create volume with same name but different capacity than the existing one")
 		}
 	}
 
