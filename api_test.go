@@ -58,6 +58,7 @@ import (
 //
 
 var size = "1GiB"
+var sizeint int64 = 1024 * 1024 * 1024
 var volname1 = "apitest_1"
 var volname2 = "apitest_2"
 var expandSize = "1GiB"
@@ -195,6 +196,17 @@ func TestAPICreateVolume(t *testing.T) {
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 	ShowVolume(t, volname1)
 	ShowVolumes(t)
+
+	var exists bool
+	exists, err = client.CheckVolumeExists(volname1, sizeint)
+	fmt.Printf("CheckVolumeExists(%s, %d) returned %v, %v\n", volname1, sizeint, exists, err)
+	g.Expect(err).To(BeNil())
+	g.Expect(exists).To(Equal(true))
+
+	exists, err = client.CheckVolumeExists("unknown-volume", sizeint)
+	fmt.Printf("CheckVolumeExists(%s, %d) returned %v, %v\n", volname1, sizeint, exists, err)
+	g.Expect(err).To(BeNil())
+	g.Expect(exists).To(Equal(false))
 }
 
 func TestAPIShowInitiators(t *testing.T) {
