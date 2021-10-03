@@ -1,3 +1,19 @@
+## [1.0.1](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.0...v1.0.1) (2021-10-03)
+
+### Chores
+
+- [skip release] remove changelog workflow ([233d066](https://github.com/Seagate/seagate-exos-x-api-go/commit/233d0668a68b47665dd82ae609d7f61c92f854c4))
+- correct license in package.json ([5d6b648](https://github.com/Seagate/seagate-exos-x-api-go/commit/5d6b648cd8f63675fbc6dcd63c1a6727ca8b180b))
+- **release:** v1.0.0 ([758afd9](https://github.com/Seagate/seagate-exos-x-api-go/commit/758afd9c601d7765cfc206a2e2d84e6b1847d7e6))
+- **release:** v1.0.0 ([cc746bc](https://github.com/Seagate/seagate-exos-x-api-go/commit/cc746bc8882ddd9b3f2dae00196381779969ddf3))
+- **release:** v1.0.1 ([6b51d9b](https://github.com/Seagate/seagate-exos-x-api-go/commit/6b51d9ba7a530b2b0f32fd691c13e19bbd667cb2))
+- **release:** v1.0.1 ([5a31127](https://github.com/Seagate/seagate-exos-x-api-go/commit/5a3112725cc7af5b18407d42c9dd3415de22847c))
+- remove changelog workflow ([a6cf63f](https://github.com/Seagate/seagate-exos-x-api-go/commit/a6cf63fc2404e156eb648dd2200f5d5bda59b90c))
+
+### Other
+
+- Merge branch 'main' of github.com:Seagate/seagate-exos-x-api-go into main ([896fdc8](https://github.com/Seagate/seagate-exos-x-api-go/commit/896fdc8b35f8f28b982aa8c91254db15ad0d2a38))
+
 # 1.0.0 (2021-10-03)
 
 ### Bug Fixes
