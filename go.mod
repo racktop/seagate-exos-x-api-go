@@ -1,4 +1,4 @@
-module github.com/seagate/seagate-exos-x-api-go
+module github.com/Seagate/seagate-exos-x-api-go
 
 go 1.16
 
