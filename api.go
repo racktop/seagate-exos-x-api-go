@@ -362,7 +362,7 @@ func (client *Client) mapVolumeProcess(volumeName, initiatorName string, lun int
 	if metadata.ReturnCode == initiatorNicknameOrIdentifierNotFound {
 		nodeIDParts := strings.Split(initiatorName, ":")
 		if len(nodeIDParts) < 2 {
-			return status.Error(codes.InvalidArgument, "specified node ID is not a valid IQN")
+			return status.Error(codes.NotFound, "specified node ID is not a valid IQN")
 		}
 
 		nickname := strings.Join(nodeIDParts[1:], ":")
@@ -416,9 +416,13 @@ func (client *Client) CheckVolumeExists(volumeID string, size int64) (bool, erro
 // PublishVolume: Attach a volume to an initiator
 func (client *Client) PublishVolume(volumeId string, initiatorName string) (string, error) {
 
-	hostNames, _, err := client.GetVolumeMapsHostNames(volumeId)
+	hostNames, apistatus, err := client.GetVolumeMapsHostNames(volumeId)
 	if err != nil {
-		return "", err
+		if apistatus != nil && apistatus.ReturnCode == volumeNotFoundErrorCode {
+			return "", status.Errorf(codes.NotFound, "The specified volume (%s) was not found.", volumeId)
+		} else {
+			return "", err
+		}
 	}
 	for _, hostName := range hostNames {
 		if hostName != initiatorName {
@@ -430,6 +434,7 @@ func (client *Client) PublishVolume(volumeId string, initiatorName string) (stri
 	if err != nil {
 		return "", err
 	}
+
 	klog.Infof("using LUN %d", lun)
 
 	if err = client.mapVolumeProcess(volumeId, initiatorName, lun); err != nil {
