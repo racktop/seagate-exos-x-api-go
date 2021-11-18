@@ -121,12 +121,14 @@ func (client *Client) ShowHostMaps(host string) ([]Volume, *ResponseStatus, erro
 	return mappings, status, err
 }
 
-// ShowSnapshots : Show one snaphot, or all snapshots if name = ""
-func (client *Client) ShowSnapshots(names ...string) (*Response, *ResponseStatus, error) {
-	if len(names) == 0 {
-		return client.FormattedRequest("/show/snapshots")
+// ShowSnapshots : Show one snaphot, or all snapshots, or all snapshots for a volume
+func (client *Client) ShowSnapshots(snapshotId string, sourceVolumeId string) (*Response, *ResponseStatus, error) {
+	if sourceVolumeId != "" {
+		return client.FormattedRequest("/show/snapshots/volume/%q", sourceVolumeId)
+	} else if snapshotId != "" {
+		return client.FormattedRequest("/show/snapshots/pattern/%q", snapshotId)
 	}
-	return client.FormattedRequest("/show/snapshots/pattern/%q", strings.Join(names, ","))
+	return client.FormattedRequest("/show/snapshots")
 }
 
 // CreateSnapshot : create a snapshot in a snap pool and the snap pool if it doesn't exsits
