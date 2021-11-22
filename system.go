@@ -235,14 +235,14 @@ func (system *SystemInfo) GetPoolType(pool string) (string, error) {
 }
 
 // GetTargetId: Return the target id value for this storage system
-func (system *SystemInfo) GetTargetId() (string, error) {
+func (system *SystemInfo) GetTargetId(portType string) (string, error) {
 	if system == nil {
 		return "", fmt.Errorf("system pointer is nil")
 	}
 
 	for _, p := range system.Ports {
-		if p.TargetId != "" {
-			klog.V(2).Infof("++ TargetId (%s) for (%s)\n", p.TargetId, system.IPAddress)
+		if p.Type == portType && p.TargetId != "" {
+			klog.V(2).Infof("++ TargetId (%s) for (%s) type (%s)\n", p.TargetId, system.IPAddress, p.Type)
 			return p.TargetId, nil
 		}
 	}
