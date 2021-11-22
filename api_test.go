@@ -130,7 +130,7 @@ func ShowSnapshot(t *testing.T, name string) {
 	var err error
 	var status *ResponseStatus
 	var response *Response
-	response, status, err = client.ShowSnapshots(name)
+	response, status, err = client.ShowSnapshots(name, "")
 	g.Expect(err).To(BeNil())
 	g.Expect(status.ResponseTypeNumeric).To(Equal(0))
 
