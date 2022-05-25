@@ -389,18 +389,17 @@ func (client *Client) mapVolumeProcess(volumeName, initiatorName string, lun int
 
 // CheckVolumeExists: Return true if a volume already exists
 func (client *Client) CheckVolumeExists(volumeID string, size int64) (bool, error) {
-	data, responseStatus, err := client.ShowVolumes()
+	data, responseStatus, err := client.ShowVolumes(volumeID)
 	if err != nil && responseStatus.ReturnCode != badInputParam {
 		return false, err
 	}
 
 	for _, object := range data.Objects {
 		if object.Name == "volume" {
-			klog.V(2).Infof("volume exists: checking (%s) for (%s) size (%d)", object.PropertiesMap["volume-name"].Data, volumeID, size)
-
 			if object.PropertiesMap["volume-name"].Data == volumeID {
 				blocks, _ := strconv.ParseInt(object.PropertiesMap["blocks"].Data, 10, 64)
 				blocksize, _ := strconv.ParseInt(object.PropertiesMap["blocksize"].Data, 10, 64)
+				klog.V(3).Infof("volume exists: checking (%s) size (%d) against blocksize (%d)", volumeID, size, blocksize)
 
 				if blocks*blocksize == size {
 					return true, nil
@@ -443,4 +442,23 @@ func (client *Client) PublishVolume(volumeId string, initiatorName string) (stri
 
 	klog.Infof("successfully mapped volume (%s) for initiator (%s) using LUN (%d)", volumeId, initiatorName, lun)
 	return strconv.Itoa(lun), nil
+}
+
+// GetVolumeWwn: Retrieve the WWN for a volume, very useful for host operating system device mapping
+func (client *Client) GetVolumeWwn(volumeName string) (string, error) {
+
+	wwn := ""
+	response, _, err := client.ShowVolumes(volumeName)
+	if err == nil {
+		statusObject := response.ObjectsMap["status"]
+		if statusObject != nil {
+			responseTypeNumeric, _ := strconv.Atoi(statusObject.PropertiesMap["response-type-numeric"].Data)
+			if responseTypeNumeric == 0 {
+				wwn = strings.ToLower(response.ObjectsMap["volume"].PropertiesMap["wwn"].Data)
+			}
+		}
+	}
+
+	klog.V(3).Infof("GetVolumeWwn (%s) returning wwn (%s)", volumeName, wwn)
+	return wwn, err
 }
