@@ -448,14 +448,10 @@ func (client *Client) PublishVolume(volumeId string, initiatorName string) (stri
 func (client *Client) GetVolumeWwn(volumeName string) (string, error) {
 
 	wwn := ""
-	response, _, err := client.ShowVolumes(volumeName)
-	if err == nil {
-		statusObject := response.ObjectsMap["status"]
-		if statusObject != nil {
-			responseTypeNumeric, _ := strconv.Atoi(statusObject.PropertiesMap["response-type-numeric"].Data)
-			if responseTypeNumeric == 0 {
-				wwn = strings.ToLower(response.ObjectsMap["volume"].PropertiesMap["wwn"].Data)
-			}
+	response, status, err := client.ShowVolumes(volumeName)
+	if err == nil && status.ResponseTypeNumeric == 0 {
+		if response.ObjectsMap["volume"] != nil {
+			wwn = strings.ToLower(response.ObjectsMap["volume"].PropertiesMap["wwn"].Data)
 		}
 	}
 
