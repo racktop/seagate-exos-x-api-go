@@ -1,3 +1,15 @@
+## [1.0.6](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.5...v1.0.6) (2022-05-26)
+
+### Chores
+
+- **deps:** bump minimist from 1.2.5 to 1.2.6 ([a58ea6f](https://github.com/Seagate/seagate-exos-x-api-go/commit/a58ea6fc323c0eb20349658486b63389a3042460))
+- **deps:** bump node-fetch from 2.6.5 to 2.6.7 ([a7bfda6](https://github.com/Seagate/seagate-exos-x-api-go/commit/a7bfda62b438d89ac2c88e378722faa71585b019))
+
+### Other
+
+- Merge pull request #17 from Seagate/dependabot/npm_and_yarn/node-fetch-2.6.7 ([b38d199](https://github.com/Seagate/seagate-exos-x-api-go/commit/b38d199d806d0e2cb257145ec6b8731de816cb08)), closes [#17](https://github.com/Seagate/seagate-exos-x-api-go/issues/17)
+- Merge pull request #16 from Seagate/dependabot/npm_and_yarn/minimist-1.2.6 ([a8414ff](https://github.com/Seagate/seagate-exos-x-api-go/commit/a8414ff7b5e04d1065c7cc4d51e992472624e1c6)), closes [#16](https://github.com/Seagate/seagate-exos-x-api-go/issues/16)
+
 ## [1.0.5](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.4...v1.0.5) (2021-11-24)
 
 ### Bug Fixes
