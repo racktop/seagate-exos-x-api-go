@@ -1,3 +1,17 @@
+## [1.0.7](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.6...v1.0.7) (2022-05-26)
+
+### Bug Fixes
+
+- CheckVolumeExists() optimization and new GetVolumeWwn() ([c73083a](https://github.com/Seagate/seagate-exos-x-api-go/commit/c73083a51c34135523b83c97b10c79da810fa950))
+
+### Code Style
+
+- GetVolumeWwn() improvement ([5e2424f](https://github.com/Seagate/seagate-exos-x-api-go/commit/5e2424f40cf0fb6561a620c602e490df436f3b94))
+
+### Other
+
+- Merge pull request #18 from Seagate/fix/wwn ([4bbb191](https://github.com/Seagate/seagate-exos-x-api-go/commit/4bbb191320d7abe0f53fc3c9e73eab711788c774)), closes [#18](https://github.com/Seagate/seagate-exos-x-api-go/issues/18)
+
 ## [1.0.6](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.5...v1.0.6) (2022-05-26)
 
 ### Chores
