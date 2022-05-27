@@ -330,6 +330,11 @@ func (client *Client) chooseLUN(initiatorName string) (int, error) {
 
 	sort.Sort(Volumes(volumes))
 
+	klog.V(5).Infof("checking if next LUN is not above maximum LUNs limit")
+	if volumes[len(volumes)-1].LUN+1 < MaximumLUN {
+		return volumes[len(volumes)-1].LUN + 1, nil
+	}
+
 	klog.V(5).Infof("checking if LUN 1 is not already in use")
 	if len(volumes) == 0 || volumes[0].LUN > 1 {
 		return 1, nil
@@ -342,10 +347,7 @@ func (client *Client) chooseLUN(initiatorName string) (int, error) {
 		}
 	}
 
-	klog.V(5).Infof("checking if next LUN is not above maximum LUNs limit")
-	if volumes[len(volumes)-1].LUN+1 < MaximumLUN {
-		return volumes[len(volumes)-1].LUN + 1, nil
-	}
+	klog.Errorf("no more available LUNs: [%d] luns=%v", len(volumes), volumes)
 
 	return -1, status.Error(codes.ResourceExhausted, "no more available LUNs")
 }
