@@ -1,3 +1,14 @@
+## [1.0.8](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.7...v1.0.8) (2022-05-31)
+
+### Bug Fixes
+
+- ChooseLUN uses next highest lun before wrapping ([80883af](https://github.com/Seagate/seagate-exos-x-api-go/commit/80883af1a22a1043f83fe461343eaed57564711f))
+- Correctly handle a volumes slice of zero length ([242b3fa](https://github.com/Seagate/seagate-exos-x-api-go/commit/242b3fa540319d8ec1d21200d0a390a5fed275ca))
+
+### Other
+
+- Merge pull request #19 from Seagate/fix/chooselun ([3d1a38b](https://github.com/Seagate/seagate-exos-x-api-go/commit/3d1a38b18ac6440960897e2ae08f06a62a52d86f)), closes [#19](https://github.com/Seagate/seagate-exos-x-api-go/issues/19)
+
 ## [1.0.7](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.6...v1.0.7) (2022-05-26)
 
 ### Bug Fixes
