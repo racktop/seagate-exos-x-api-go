@@ -330,22 +330,30 @@ func (client *Client) chooseLUN(initiatorName string) (int, error) {
 
 	sort.Sort(Volumes(volumes))
 
-	klog.V(5).Infof("checking if LUN 1 is not already in use")
-	if len(volumes) == 0 || volumes[0].LUN > 1 {
+	klog.V(5).Infof("use LUN 1 when volumes slice is empty")
+	if len(volumes) == 0 {
 		return 1, nil
 	}
 
-	klog.V(5).Infof("searching for an available LUN between LUNs in use")
+	klog.V(5).Infof("use the next highest LUN number, until the end is reached")
+	if volumes[len(volumes)-1].LUN+1 < MaximumLUN {
+		return volumes[len(volumes)-1].LUN + 1, nil
+	}
+
+	klog.V(5).Infof("use LUN 1 when not in use")
+	if volumes[0].LUN > 1 {
+		return 1, nil
+	}
+
+	klog.V(5).Infof("use the next available LUN, searching from LUN 1 towards the maximum")
 	for index := 1; index < len(volumes); index++ {
+		// Find a gap between used LUNs
 		if volumes[index].LUN-volumes[index-1].LUN > 1 {
 			return volumes[index-1].LUN + 1, nil
 		}
 	}
 
-	klog.V(5).Infof("checking if next LUN is not above maximum LUNs limit")
-	if volumes[len(volumes)-1].LUN+1 < MaximumLUN {
-		return volumes[len(volumes)-1].LUN + 1, nil
-	}
+	klog.Errorf("no available LUN: [%d] luns=%v", len(volumes), volumes)
 
 	return -1, status.Error(codes.ResourceExhausted, "no more available LUNs")
 }
