@@ -1,3 +1,20 @@
+## [1.0.10](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.9...v1.0.10) (2022-11-23)
+
+### Bug Fixes
+
+- **ShowHostMaps:** Return host maps when initiator has a nickname or is in a group ([9b72e0f](https://github.com/Seagate/seagate-exos-x-api-go/commit/9b72e0ff3de8c30b15c39cd6d46b294dfabd2b3e))
+
+### Chores
+
+- add workflow_dispatch to enable manual workflow run ([35cf7d9](https://github.com/Seagate/seagate-exos-x-api-go/commit/35cf7d9492fbf3bc60d9122773a4f9637066619b))
+- remove release.yml changes ([d7686d1](https://github.com/Seagate/seagate-exos-x-api-go/commit/d7686d161cee7ab5ed2d998f02dfefd4b2f79f6f))
+- update workflow_dispatch ([b3f01be](https://github.com/Seagate/seagate-exos-x-api-go/commit/b3f01be4189dd22dccdedbd9fde0070d235802fd))
+
+### Other
+
+- Merge pull request #26 from Seagate/chore/manualrelease2 ([c266540](https://github.com/Seagate/seagate-exos-x-api-go/commit/c266540f044528c470a60413ef263f3e21a67f7a)), closes [#26](https://github.com/Seagate/seagate-exos-x-api-go/issues/26)
+- Merge pull request #25 from Seagate/chore/manualrelease ([b6d4a6e](https://github.com/Seagate/seagate-exos-x-api-go/commit/b6d4a6e5a31adb828470a8fb0b0dbe65a3f59a67)), closes [#25](https://github.com/Seagate/seagate-exos-x-api-go/issues/25)
+
 ## [1.0.8](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.7...v1.0.8) (2022-05-31)
 
 ### Bug Fixes
