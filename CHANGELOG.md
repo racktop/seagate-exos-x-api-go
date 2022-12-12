@@ -1,3 +1,9 @@
+## [1.0.11](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.10...v1.0.11) (2022-12-12)
+
+### Chores
+
+- Update logging to klog2 for compatibility with csi driver ([815552d](https://github.com/Seagate/seagate-exos-x-api-go/commit/815552d29c5d1b445b9295165fb7c6d9b7c210ec))
+
 ## [1.0.10](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.9...v1.0.10) (2022-11-23)
 
 ### Bug Fixes
