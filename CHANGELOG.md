@@ -1,3 +1,13 @@
+## [1.0.12](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.11...v1.0.12) (2022-12-22)
+
+### Bug Fixes
+
+- avoid recursive call to Login() (#27) ([3030dd2](https://github.com/Seagate/seagate-exos-x-api-go/commit/3030dd2fdea1423a997120fb8653a92b89f0f32b)), closes [#27](https://github.com/Seagate/seagate-exos-x-api-go/issues/27)
+
+### Other
+
+- Merge pull request #31 from Seagate/fix_recursive_login ([f617f52](https://github.com/Seagate/seagate-exos-x-api-go/commit/f617f5221b1d436ffa37e9f365d84c83fde04886)), closes [#31](https://github.com/Seagate/seagate-exos-x-api-go/issues/31) [#27](https://github.com/Seagate/seagate-exos-x-api-go/issues/27)
+
 ## [1.0.11](https://github.com/Seagate/seagate-exos-x-api-go/compare/v1.0.10...v1.0.11) (2022-12-12)
 
 ### Chores
