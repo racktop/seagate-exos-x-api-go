@@ -108,7 +108,7 @@ func (client *Client) request(req *Request) (*Response, *ResponseStatus, error) 
 	status := res.GetStatus()
 
 	// Some API versions return success with an invalid session key response, so log in again
-	if code == http.StatusOK && status.ReturnCode == invalidSessionKey {
+	if !isLoginReq && code == http.StatusOK && status.ReturnCode == invalidSessionKey {
 		klog.Info("invalid session key response, trying to re-login")
 		err = client.Login()
 		if err != nil {
